@@ -1,0 +1,17 @@
+{
+	"name": "node-twich",
+	"version": "0.0.1",
+	"description": "",
+	"main": "main.js",
+	"type": "module",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "echo \"Node server is running...\" && node main.js"
+	},
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"axios": "^1.6.7",
+		"puppeteer": "^22.4.1"
+	}
+}
