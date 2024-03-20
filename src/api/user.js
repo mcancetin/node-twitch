@@ -12,15 +12,16 @@ let userModel = {
 };
 
 export default class User {
+	#axiosInstance;
 	constructor(axiosInstance) {
-		this.axiosInstance = axiosInstance;
+		this.#axiosInstance = axiosInstance;
 	}
 
 	// You can use with app access token or user access token
 	async getUser({ username }) {
 		if (!username) throw new Error("Username is required");
 		try {
-			const response = await this.axiosInstance.get(
+			const response = await this.#axiosInstance.get(
 				`/users?login=${username}`
 			);
 			if (!response.data?.length)
@@ -38,7 +39,7 @@ export default class User {
 	async updateUser({ description }) {
 		if (!description) throw new Error("Description is required");
 		try {
-			await this.axiosInstance.put("/users", {
+			await this.#axiosInstance.put("/users", {
 				description
 			});
 			console.log("User updated successfully");
@@ -51,7 +52,7 @@ export default class User {
 	async getUserBlockList({ broadcaster_id, first = 20, after = "" }) {
 		if (!broadcaster_id) throw new Error("Broadcaster id is required");
 		try {
-			const response = await this.axiosInstance.get(
+			const response = await this.#axiosInstance.get(
 				`/users/blocks?broadcaster_id=${broadcaster_id}&first=${first}&after=${after}`
 			);
 			return response.data;
@@ -66,7 +67,7 @@ export default class User {
 	async blockUser({ target_user_id, source_context, reason }) {
 		if (!target_user_id) throw new Error("Target user id is required");
 		try {
-			const response = await this.axiosInstance.put("/users/blocks", {
+			const response = await this.#axiosInstance.put("/users/blocks", {
 				target_user_id,
 				source_context,
 				reason
@@ -82,7 +83,7 @@ export default class User {
 	async unblockUser({ target_user_id }) {
 		if (!target_user_id) throw new Error("Target user id is required");
 		try {
-			await this.axiosInstance.delete(
+			await this.#axiosInstance.delete(
 				`/users/blocks?target_user_id=${target_user_id}`
 			);
 			console.log("User unblocked successfully");
@@ -94,7 +95,7 @@ export default class User {
 	// You can use with user access token
 	async getUserExtensions() {
 		try {
-			const response = await this.axiosInstance.get(
+			const response = await this.#axiosInstance.get(
 				`/users/extensions/list`
 			);
 			return response.data;
@@ -108,7 +109,7 @@ export default class User {
 	// You can use with app access token or user access token
 	async getUserActiveExtensions({ user_id }) {
 		try {
-			const response = await this.axiosInstance.get(
+			const response = await this.#axiosInstance.get(
 				`/users/extensions?user_id=${user_id}`
 			);
 			return response.data;
