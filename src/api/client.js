@@ -7,21 +7,31 @@ import Clip from "./clip.js";
 const TWITCH_BASE_URL = "https://api.twitch.tv/helix";
 
 export default class Client {
+	#authService;
+	#axiosInstance;
+	#accessToken;
+	#refreshToken;
+	loginType = Object.freeze({
+		CLIENT_CREDENTIALS: "clientCredentials",
+		AUTHORIZATION_CODE: "authorizationCode"
+	});
+
 	constructor(clientId, clientSecret) {
-		this.authService = new Auth(clientId, clientSecret);
-		this.axiosInstance = axios.create({
+		this.#authService = new Auth(clientId, clientSecret);
+		this.#axiosInstance = axios.create({
 			baseURL: TWITCH_BASE_URL,
 			headers: {
-				"Client-Id": this.clientId
+				"Client-Id": clientId,
+				"Content-Type": "application/json"
 			}
 		});
 
-		this.axiosInstance.interceptors.response.use(
+		this.#axiosInstance.interceptors.response.use(
 			(response) => response.data,
 			async (error) => {
 				if (error.response.status === 401) {
-					await this.authService.refreshToken();
-					return this.axiosInstance(error.config);
+					await this.#authService.refreshToken();
+					return this.#axiosInstance(error.config);
 				}
 				return Promise.reject(error);
 			}
@@ -29,31 +39,29 @@ export default class Client {
 	}
 
 	// method can be "clientCredentials" or "authorizationCode". Default method is client credentials. If method is "authorizationCode", scope is required
-	async login({
-		method = this.authService.loginType.CLIENT_CREDENTIALS,
-		scope = ""
-	}) {
-		if (method === this.authService.loginType.AUTHORIZATION_CODE && !scope)
+	async login({ method, scope = "" }) {
+		if (method === this.loginType.AUTHORIZATION_CODE && !scope)
 			throw new Error("Scope is required");
-		const { accessToken, refreshToken } = await this.authService[method]({
+		const { accessToken, refreshToken } = await this.#authService[method]({
 			scope
 		});
 		this.#setAuthHeaders(accessToken, refreshToken);
-		this.#initServices();
 		console.log("Logged in");
+		this.#initServices();
+		console.log("Services initialized");
 	}
 
-	#setAuthHeaders(access_token, refresh_token = null) {
-		this.access_token = access_token;
-		this.refresh_token = refresh_token;
+	#setAuthHeaders(accessToken, refreshToken = null) {
+		this.#accessToken = accessToken;
+		this.#refreshToken = refreshToken;
 
-		this.axiosInstance.defaults.headers.common[
+		this.#axiosInstance.defaults.headers.common[
 			"Authorization"
-		] = `Bearer ${access_token}`;
+		] = `Bearer ${accessToken}`;
 	}
 
 	#initServices() {
-		this.userService = new User(this.axiosInstance);
-		this.clipService = new Clip(this.axiosInstance);
+		this.userService = new User(this.#axiosInstance);
+		this.clipService = new Clip(this.#axiosInstance);
 	}
 }

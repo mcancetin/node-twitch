@@ -6,10 +6,6 @@ import url from "url";
 const TWITCH_AUTH_URL = "https://id.twitch.tv/oauth2/token";
 
 export default class Auth {
-	loginType = Object.freeze({
-		CLIENT_CREDENTIALS: "clientCredentials",
-		AUTHORIZATION_CODE: "authorizationCode"
-	});
 	constructor(clientId, clientSecret) {
 		this.clientId = clientId;
 		this.clientSecret = clientSecret;
@@ -22,10 +18,9 @@ export default class Auth {
 				client_secret: this.clientSecret,
 				grant_type: "client_credentials"
 			});
-			console.log(response.data);
 			return {
-				access_token: response.data.access_token,
-				refres_token: null
+				accessToken: response.data.access_token,
+				refreshToken: null
 			};
 		} catch (error) {
 			throw new Error("Login failed:", error);
@@ -61,11 +56,9 @@ export default class Auth {
 			redirect_uri: "http://localhost"
 		});
 
-		console.log(response.data);
-
 		return {
-			access_token: response.data.access_token,
-			refresh_token: response.data.refresh_token
+			accessToken: response.data.access_token,
+			refreshToken: response.data.refresh_token
 		};
 	}
 
