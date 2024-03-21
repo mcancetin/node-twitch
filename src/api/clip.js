@@ -2,6 +2,7 @@ import { createSearchParams } from "../utils/createSearchParams.js";
 
 const searchParams = {
 	broadcaster_id: "",
+	game_id: "",
 	first: "",
 	after: "",
 	before: "",
