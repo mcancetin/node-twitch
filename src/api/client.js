@@ -1,9 +1,9 @@
 import axios from "axios";
 
 import Auth from "./auth.js";
-import User from "./user.js";
-import Clip from "./clip.js";
-import Game from "./game.js";
+import User from "./twitch-user.js";
+import Clip from "./twitch-clip.js";
+import Game from "./twitch-game.js";
 
 const TWITCH_BASE_URL = "https://api.twitch.tv/helix";
 
