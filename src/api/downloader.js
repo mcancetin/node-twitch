@@ -6,9 +6,9 @@ export default class Downloader {
 	async downloadClip(clip, clipsFolderPath) {
 		const res = await axios.get(clip.url, { responseType: "stream" });
 
-		const videoName = `${clip.broadcaster_name}-${clip.title
-			.replace(/\s+/g, "-")
-			.toLowerCase()}`;
+		const videoName = `${
+			clip.broadcaster_name.replace(/[^a-zA-Z0-9]/g, "") || "unknown"
+		}-${clip.title.toLowerCase().replace(/[^a-zA-Z0-9]/g, "")}`;
 
 		const writeStream = fs.createWriteStream(
 			path.join(clipsFolderPath, `${videoName}.mp4`)
