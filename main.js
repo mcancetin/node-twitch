@@ -1,21 +1,23 @@
-import { exec } from "child_process";
-import Client from "./src/api/client.js";
+import Client from "./src/api/twicth-client.js";
 import Downloader from "./src/api/downloader.js";
-import humanizeDuration from "humanize-duration";
 
 import fs from "fs";
 import path from "path";
 
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+
+import { dateRangeGenerator, formatClips } from "./src/utils/index.js";
+import YoutubeClient from "./src/api/youtube-client.js";
+
 const downloader = new Downloader();
 
 const client = new Client(
-	"dea4e38o9b01z0hxj5fujulh64ehid",
-	"zpcizsrdg0qgo50dfsflavkdzzi1vo"
+	process.env.TWITCH_CLIENT_ID,
+	process.env.TWITCH_CLIENT_SECRET
 );
-console.log("Client created");
 
 await client.login({ method: client.loginType.CLIENT_CREDENTIALS });
-console.log("Client logged in");
 
 const { clipService } = client;
 
@@ -64,34 +66,22 @@ const games = [
 	}
 ];
 
-const today = new Date();
-today.setHours(0, 0, 0, 0);
-
-const yesterday = new Date(today);
-yesterday.setDate(yesterday.getDate() - 1);
+const [ended_at, started_at] = dateRangeGenerator({ range: 1 });
 
 const lolClips = await clipService.getClips({
 	game_id: "21779",
-	ended_at: today.toISOString(),
-	started_at: yesterday.toISOString(),
+	ended_at: ended_at,
+	started_at: started_at,
 	is_featured: true,
-	first: 2
+	first: 5
 });
-console.log("Clips fetched");
 
-console.log(lolClips);
-
-const filteredClips = lolClips.filter((clip) => clip.language === "en");
-console.log(
-	"Clips filtered",
-	filteredClips.reduce((acc, clip) => acc + clip.duration, 0) / 60
-);
+const filteredClips = lolClips.filter((clip) => clip.language);
 
 const clipsFolderPath = path.join(
 	new URL(".", import.meta.url).pathname,
 	"clips"
 );
-console.log("Clips folder path created");
 
 if (!fs.existsSync(clipsFolderPath)) {
 	fs.mkdirSync(clipsFolderPath);
@@ -101,81 +91,41 @@ if (!fs.existsSync(clipsFolderPath)) {
 	});
 }
 
-console.log("Clips folder cleaned");
-
 const clips = await clipService.getClipsUrl(filteredClips);
 
 for (const clip of clips) {
-	await downloader.downloadClip(clip, clipsFolderPath, (videoName) => {
-		const output = videoName.replace(/\.[^.]+$/, "_formatted.mp4"); // Dönüştürülmüş dosya adı
-		exec(
-			`ffmpeg -i ${videoName} -vf "scale=1920:1080" -r 30 -af "aformat=sample_rates=44100:channel_layouts=stereo" -c:v libx264 -preset medium -crf 23 -c:a aac -b:a 192k ${output}`,
-			(error, stdout, stderr) => {
-				if (error) {
-					console.error(`exec error: ${error}`);
-					return;
-				}
-				fs.unlinkSync(videoName);
-				fs.appendFileSync(
-					path.join(clipsFolderPath, "formatted.txt"),
-					`file '${output}'\n`
-				);
-			}
-		);
-	});
-}
-console.log("Clips downloaded successfully");
-
-const inputs = fs
-	.readdirSync(clipsFolderPath)
-	.map((file) => `${clipsFolderPath}/${file}`);
-
-async function formatClips(inputs) {
-	const formattedFiles = [];
-	for (const input of inputs) {
-		const output = input.replace(/\.[^.]+$/, "_formatted.mp4"); // Dönüştürülmüş dosya adı
-		try {
-			await execShellCommand(
-				`ffmpeg -i ${input} -vf "scale=1920:1080" -r 30 -af "aformat=sample_rates=44100:channel_layouts=stereo" -c:v libx264 -preset medium -crf 23 -c:a aac -b:a 192k ${output}`
-			);
-			fs.unlinkSync(input);
-			formattedFiles.push(output);
-		} catch (error) {
-			console.error(error);
-		}
-	}
-
-	fs.writeFileSync(
-		path.join(clipsFolderPath, "formatted.txt"),
-		formattedFiles.map((file) => `file '${file}'`).join("\n")
-	);
-
-	// Tüm dosyaların biçimlendirilmesi tamamlandıktan sonra concatClips'i çağır
-	concatClips(formattedFiles);
+	await downloader.downloadClip(clip, clipsFolderPath);
 }
 
-async function concatClips(inputs) {
-	const command = `ffmpeg -f concat -safe 0 -i ${clipsFolderPath}/formatted.txt -c copy ${clipsFolderPath}/output.mp4`;
+const inputs = fs.readdirSync(clipsFolderPath);
 
-	exec(command, (error, stdout, stderr) => {
-		if (error) {
-			console.error(`exec error: ${error}`);
-			return;
-		}
-	});
-}
+await formatClips(inputs, clipsFolderPath);
 
-function execShellCommand(cmd) {
-	return new Promise((resolve, reject) => {
-		exec(cmd, (error, stdout, stderr) => {
-			if (error) {
-				console.warn(error);
-				reject(error);
-			} else {
-				resolve(stdout ? stdout : stderr);
-			}
-		});
-	});
-}
+const youtubeClient = new YoutubeClient(
+	{
+		clientId: process.env.YOUTUBE_CLIENT_ID,
+		clientSecret: process.env.YOUTUBE_CLIENT_SECRET,
+		redirectUri: process.env.YOUTUBE_REDIRECT_URI
+	},
+	["https://www.googleapis.com/auth/youtube.upload"]
+);
 
-await formatClips(inputs);
+await youtubeClient.login();
+
+const mostViewedClip = clips.reduce((prev, current) =>
+	prev.views > current.views ? prev : current
+);
+
+const title = `${mostViewedClip.title} Best of LoL Highlights`;
+
+const description = clips
+	.map((clip) => `https://www.twitch.tv/${clip.broadcaster_name}`)
+	.join("\n");
+
+console.log(title, description);
+
+await youtubeClient.uploadVideo({
+	filePath: `${clipsFolderPath}/output.mp4`,
+	title,
+	description
+});

@@ -1,6 +1,6 @@
-import { createSearchParams } from "../utils/createSearchParams.js";
-
 import puppeteer from "puppeteer";
+
+import { createSearchParams } from "../utils/index.js";
 
 const searchParams = {
 	broadcaster_id: "",
@@ -37,10 +37,10 @@ export default class Clip {
 		}
 	}
 
-	async getClipsUrl() {
+	async getClipsUrl(clips = this.clips) {
 		const urls = [];
 
-		for (const clip of this.clips) {
+		for (const clip of clips) {
 			console.log("Getting clip url for", clip.title);
 			const src = await puppeteer.launch().then(async (browser) => {
 				const page = await browser.newPage();

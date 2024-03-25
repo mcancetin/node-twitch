@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import Auth from "./auth.js";
+import Auth from "./twitch-auth.js";
 import User from "./twitch-user.js";
 import Clip from "./twitch-clip.js";
 import Game from "./twitch-game.js";

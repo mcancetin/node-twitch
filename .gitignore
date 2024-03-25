@@ -3,3 +3,6 @@
 /output.mp4
 /DS_Store
 /transition
+
+/.env
+/.env.local
